@@ -46,7 +46,7 @@ completion time = 0.277596 // 1T (values from an AArch64, 10-core machine)
 
 We used per-buckets locks to avoid race conditions . This ensures writes to two different buckets can be concurrent, and write to same bucket by different threads will be consistent
 
-3) More number of locks i.e per-bucket ,increases granularity. Higher the granularity,hiher the concurrency (also higher overhead to maintain locks)
+3) More number of locks i.e per-bucket ,increases granularity. Higher the granularity,higher the concurrency (also higher overhead to maintain locks)
 Had we used only one lock for the entire hash-map, all the writes would become serial and irrespective of number of threads, insertion operation would always take same amount of time.(almost, ignoring threads related overhead). 
 
 4) This experiment was repeated with 1,2,4 and 8 threads.
