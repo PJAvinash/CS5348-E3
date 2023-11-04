@@ -61,12 +61,13 @@ Amdahl's law:
 
 speedup =  1/[(1-p)+p/N] where p is fraction of parallelizable code and N is number of concurrent threads, for an ideal case if p = 1.0 , speedup =1/(1/ N) = N.
 
-in our case as most of the code (~ 89%) except thread creation and etc is parallelizable,
-0.276724  * 1 = 0.276724 
+except for thread creation, key initialization etc, in our case as most of the code (p = 0.89) is parallelizable.
+
+0.276724  * 1 = 0.276724 //execution_time * num_threads 
 0.152940  * 2 = 0.305880
 0.100040  * 4 = 0.400160
 0.058900  * 8 = 0.471200
-0.061212  * 10= 0.612120
+0.061212  * 10= 0.612120 
 
 total time * num_threads  is almost constant. or total execution times is reduced by a factor of NUM_THREADS.
 
