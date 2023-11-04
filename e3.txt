@@ -1,0 +1,78 @@
+1) With 1 thread there will be no race conditions while inserting/updating a key value pair in the hash table
+But with more than 1 thread, it is possible for some keys to miss. 
+
+-----------------------------------------------------------------------------
+Illustration:
+
+note that key[i] is randomly generated hence we may have two 2's.
+
+let key[N] = [1,2,3,2,4,1]
+// before race condition at key = 2,
+
+Bucket[i] (for 4 buckets ) no race condition occured so far.
+1  -> a -> b -> c -> d ->null
+2  -> x-> y -> z -> null
+3  -> l-> m -> n -> null
+4  -> p -> q-> r-> null
+
+suppose two threads A,B are trying to enter a data D_A, D_B at key = 2 concurrently and say A writes first
+
+A's view: after write
+1  -> ......
+2  -> D_A -> y -> z -> null
+3  -> ......
+4  -> ......
+
+B's view: accesses memory (bucket's pointer) before a's write is completed.
+1  -> ......
+2  -> x -> y -> z -> null
+3  -> ......
+4  -> ......
+
+B overwrites: a's changes are lost (D_B ->y instead of D_B->D_A->y)
+1  -> ......
+2  -> D_B -> y -> z -> null
+3  -> ......
+4  -> ......
+
+both D_A and D_B point to y, but we will have D_B at Bucket-2, and D_A will become a memory leak.
+
+
+2) Yes , two threaded version is faster. Approximately twice as fast as single threaded execution. 
+
+completion time = 0.155519 // 2T
+
+completion time = 0.277596 // 1T (values from an AArch64, 10-core machine)
+
+We used per-buckets locks to avoid race conditions . This ensures writes to two different buckets can be concurrent, and write to same bucket by different threads will be consistent
+
+3) More number of locks i.e per-bucket ,increases granularity. Higher the granularity,hiher the concurrency (also higher overhead to maintain locks)
+Had we used only one lock for the entire hash-map, all the writes would become serial and irrespective of number of threads, insertion operation would always take same amount of time.(almost, ignoring threads related overhead). 
+
+4) This experiment was repeated with 1,2,4 and 8 threads.
+completion time = 0.276724 //1T
+completion time = 0.152940 //2T
+completion time = 0.100040 //4T
+completion time = 0.058900 //8T
+completion time = 0.061212 //10T
+For an embarrassingly parallel program, speeadup = NUM_THREADS ( or parallel operations)
+
+Amdahl's law:
+
+speedup =  1/[(1-p)+p/N] where p is fraction of parallelizable code and N is number of concurrent threads, for an ideal case if p = 1.0 , speedup =1/(1/ N) = N.
+
+in our case as most of the code (~ 89%) except thread creation and etc is parallelizable,
+0.276724  * 1 = 0.276724 
+0.152940  * 2 = 0.305880
+0.100040  * 4 = 0.400160
+0.058900  * 8 = 0.471200
+0.061212  * 10= 0.612120
+
+total time * num_threads  is almost constant. or total execution times is reduced by a factor of NUM_THREADS.
+
+
+
+
+
+
+

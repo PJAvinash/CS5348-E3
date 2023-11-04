@@ -18,7 +18,36 @@ struct entry *table[NBUCKET];
 int keys[NKEYS];
 int nthread = 1;
 volatile int done;
+/*
+** added by JXP220032
+*/
+pthread_mutex_t ht_mutexes[NBUCKET];
 
+/*
+** function to initialize mutextes
+*/
+void 
+init_mutexes()
+{
+  for (int i = 0; i < NBUCKET; i++)
+  {
+    pthread_mutex_init(&ht_mutexes[i], NULL);
+  }
+}
+/*
+** function to destroy mutextes
+*/
+void 
+destroy_mutexes()
+{
+  for (int i = 0; i < NBUCKET; i++)
+  {
+    pthread_mutex_destroy(&ht_mutexes[i]);
+  }
+}
+/*
+** end of modification
+*/
 
 double
 now()
@@ -56,12 +85,18 @@ static
 void put(int key, int value)
 {
   int i = key % NBUCKET;
+  //added by JXP220032
+  //per-bucket lock aquire
+  pthread_mutex_lock(&ht_mutexes[i]);
   insert(key, value, &table[i], table[i]);
+  pthread_mutex_unlock(&ht_mutexes[i]);
+  //per-bucket lock release
 }
 
 static struct entry*
 get(int key)
 {
+  // doesnt need a lock for reading(only)
   struct entry *e = 0;
   for (e = table[key % NBUCKET]; e != 0; e = e->next) {
     if (e->key == key) break;
@@ -88,6 +123,7 @@ thread(void *xa)
   printf("%ld: put time = %f\n", n, t1-t0);
 
   // Wait for all threads to finish put operations
+  // comment added by JXP220032 - reading and writing will not happen concurrently because of following __sync_fetch_and_add. 
   __sync_fetch_and_add(&done, 1);
   while (done < nthread) ;
 
@@ -114,6 +150,8 @@ main(int argc, char *argv[])
     fprintf(stderr, "%s: %s nthread\n", argv[0], argv[0]);
     exit(-1);
   }
+  init_mutexes() ; // added by JXP220032
+
   nthread = atoi(argv[1]);
   tha = malloc(sizeof(pthread_t) * nthread);
   srandom(0);
@@ -130,4 +168,5 @@ main(int argc, char *argv[])
   }
   t1 = now();
   printf("completion time = %f\n", t1-t0);
+  destroy_mutexes(); // added by JXP220032
 }
